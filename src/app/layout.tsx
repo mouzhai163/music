@@ -1,16 +1,19 @@
+import React from 'react'
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { ZCOOL_KuaiLe } from 'next/font/google'
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const zcoolKuaiLe = ZCOOL_KuaiLe({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { AntdRegistry } from '@ant-design/nextjs-registry';
+
+import SideMenu from './components/SideMenu';
+import MyHeader from "./components/MyHeader";
+import Footer from './components/Footer';
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -22,12 +25,33 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="zh-CN">
+      <body className={zcoolKuaiLe.className}>
+        <AntdRegistry>
+          <div className="min-h-screen bg-gray-50">
+            <header className="h-16 bg-[#F5F5F5] border-b border-gray-200">
+              <MyHeader />
+            </header>
+
+            {/* Main Content Area */}
+            <div className="flex h-[calc(100vh-64px-100px)]">
+              {/* Sidebar */}
+              <aside className="w-[14%] 2xl:w-[10%] bg-[#F9F9F9]">
+                <SideMenu />
+              </aside>
+
+              {/* Main Content */}
+              <main className="flex-1 bg-[#F8F8F8] p-6 overflow-auto">
+                {children}
+              </main>
+            </div>
+
+            {/* Footer */}
+            <Footer />
+          </div>
+        </AntdRegistry>
       </body>
     </html>
   );
