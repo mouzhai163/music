@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { usePlayStore } from "@/store/playStore";
+import { usePlayStore } from "@/store/usePlayStore";
 
 export default function VolumeInfo() {
   const { playing, currentMusic } = usePlayStore();
@@ -9,15 +9,14 @@ export default function VolumeInfo() {
     <div className="flex items-center justify-center gap-4 w-full h-full">
       {/* 专辑封面 */}
       <div className={`relative flex-shrink-0 ${playing ? "ripple-effect" : ""}`}>
-        {currentMusic && currentMusic.pic ? (
+        {currentMusic && currentMusic.picUrl ? (
           <Image
-            src={currentMusic.pic}
+            src={currentMusic.picUrl}
             alt={currentMusic.name || "封面"}
             width={60}
             height={60}
-            className={`rounded-full object-cover transition-all duration-300 album-rotate ${
-              !playing ? "pause-rotation" : ""
-            }`}
+            className={`rounded-full object-cover transition-all duration-300 album-rotate ${!playing ? "pause-rotation" : ""
+              }`}
             unoptimized
           />
         ) : (
@@ -34,10 +33,10 @@ export default function VolumeInfo() {
         </div>
         <div
           className="text-sm text-gray-500 truncate"
-          title={`${currentMusic?.ar_name} - ${currentMusic?.al_name}`}
+          title={`${currentMusic?.name} - ${currentMusic?.name}`}
         >
-          {currentMusic?.ar_name && currentMusic?.al_name
-            ? `${currentMusic.ar_name} - ${currentMusic.al_name}`
+          {currentMusic?.artists && currentMusic?.album
+            ? `${currentMusic.artists} - ${currentMusic.album}`
             : ""}
         </div>
       </div>

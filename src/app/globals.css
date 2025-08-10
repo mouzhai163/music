@@ -79,3 +79,38 @@ svg {
   animation: ripple 2s ease-out infinite;
   pointer-events: none;
 }
+/* Y轴滚动条 */
+@layer base {
+  html {
+    scrollbar-gutter: stable both-edges;
+  }
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(195, 197, 199, 0.55) transparent;
+  }
+  :where(html, body)::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  :where(html, body)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  :where(html, body)::-webkit-scrollbar-thumb {
+    background-color: rgb(100 116 139 / 0.35);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  :where(html, body):hover::-webkit-scrollbar-thumb {
+    background-color: rgb(100 116 139 / 0.6);
+  }
+  html.dark {
+    scrollbar-color: rgb(148 163 184 / 0.5) transparent;
+  }
+  html.dark::-webkit-scrollbar-thumb {
+    background-color: rgb(148 163 184 / 0.35);
+  }
+  html.dark:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(148 163 184 / 0.6);
+  }
+}

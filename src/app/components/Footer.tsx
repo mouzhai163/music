@@ -1,7 +1,7 @@
 "use client"
 import React from 'react'
 
-import Player from "@/components/music/MusicLayout";
+import Player from "@/components/Volume/MusicLayout";
 
 export default function Footer() {
   return (

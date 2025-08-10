@@ -14,14 +14,13 @@ import { HeartOutlined } from "@ant-design/icons";
 import { Howl } from "howler";
 import { message } from "antd";
 
-import VolumeControl from "@/components/music/VolumeControl";
-import { musicType, usePlayStore } from "@/store/playStore";
-import VolumeInfo from "@/components/music/VolumeInfo";
-import VolumeCard from "@/components/music/VolumeCard";
+import VolumeControl from "@/components/Volume/VolumeControl";
+import { usePlayStore } from "@/store/usePlayStore";
+import VolumeInfo from "@/components/Volume/VolumeInfo";
+import VolumeCard from "@/components/Volume/VolumeCard";
+import { getSongById } from "../../../lib/utils/MusicUtils";
+import { musicType } from "../../../types/playlist";
 
-const samplePlaylist: musicType[] = [
-  
-];
 
 
 export default function MusicLayout() {
@@ -46,7 +45,6 @@ export default function MusicLayout() {
   const volume = usePlayStore((s) => s.volume);
   const muted = usePlayStore((s) => s.muted);
   const currentMusic = usePlayStore((s) => s.currentMusic);
-  const canPlay = currentMusic?.url && playList.length > 0;
 
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -60,69 +58,100 @@ export default function MusicLayout() {
   // Howl实例
   const soundRef = useRef<Howl | null>(null);
   const animationRef = useRef<number>();
+  const lastTimeRef = useRef(0);
 
   const iconBaseClass = "transition-colors icon-smooth cursor-pointer";
   const controlIconClass = `${iconBaseClass} text-gray-700 hover:text-gray-900`;
   const playIconClass = `${iconBaseClass} text-blue-600 hover:text-blue-700`;
 
   useEffect(() => {
-    setPlayList(samplePlaylist);
-    setCurrentMusic(samplePlaylist[0]);
+    setPlayList([]);
     // eslint-disable-next-line
   }, []);
 
-  useEffect(() => {
-    if (!currentMusic?.url) return;
 
+
+  /**
+   * 根据播放列表实时更新组件
+   */
+  useEffect(() => {
+    if (!currentMusic?.id) {
+      return
+    }
     // *** 全局主动 stop+unload，彻底断绝“鬼音” ***
     if (soundRef.current) {
       try {
         soundRef.current.stop();
         soundRef.current.unload();
-      } catch (e) {}
+      } catch (e) { }
       soundRef.current = null;
     }
-    setCurrentTime(0);
+    let canceled = false;        // 竞态保护
+    let localHowl: Howl | null = null;
+    (async () => {
+      setCurrentTime(0);
+      const song = await getSongById(currentMusic.id);
+      console.log("返回的对象:" + song)
+      if (canceled) return;
+      if (!song) {
+        warning("歌曲资源加载失败");
+        return;
+      }
+      const sound = new Howl({
+        // 初始化的时候不添加源
+        src: [song.url],
+        html5: true,
+        volume: 0,
+        onload: () => setDuration(sound.duration()),
+        onplay: async () => {
+          sound.fade(0, 1, 1000);
+          if (animationRef.current) cancelAnimationFrame(animationRef.current);
+          lastTimeRef.current = 0;
+          setPlaying(true);
+          updateCurrentTime();
+        },
+        onpause: () => {
+          setPlaying(false);
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = undefined;
+          }
+        },
+        onend: () => {
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = undefined;
+          }
+          // 确保最终时间归位到总时长，避免回退
+          setCurrentTime(sound.duration());
+          lastTimeRef.current = sound.duration();
+          setPlaying(false);
+          handleSongEnd();
+        },
+      });
+      localHowl = sound;
+      soundRef.current = sound;
+      sound.play();
+    })();
 
-    const sound = new Howl({
-      src: [currentMusic.url],
-      html5: true,
-      volume: 0,
-      onload: () => setDuration(sound.duration()),
-      onplay: () => {
-        sound.fade(0, 1, 1000);
-        if (animationRef.current) cancelAnimationFrame(animationRef.current);
-        setPlaying(true);
-        updateCurrentTime();
-      },
-      onpause: () => {
-        setPlaying(false);
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-          animationRef.current = undefined;
-        }
-      },
-      onend: () => {
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-          animationRef.current = undefined;
-        }
-        setPlaying(false);
-        handleSongEnd();
-      },
-    });
-
-    soundRef.current = sound;
-    sound.play();
 
     return () => {
-      try {
-        sound.stop();
-        sound.unload();
-      } catch (e) {}
+      canceled = true;
+      if (localHowl) {
+        try {
+          localHowl.stop();
+          localHowl.unload();
+        } catch { }
+        localHowl = null;
+      }
     };
     // eslint-disable-next-line
   }, [currentMusic]);
+
+
+
+
+
 
   // 切歌模式
   const handleSongEnd = () => {
@@ -166,12 +195,12 @@ export default function MusicLayout() {
         sound.play();
         updateCurrentTime();
       }
-    } catch (error) {}
+    } catch (error) { }
   };
 
   // 播放/暂停
   const handlePlayPause = () => {
-    if (!currentMusic?.url || playList.length === 0) {
+    if (!currentMusic) {
       warning("当前没有可播放的歌曲哦~");
       return;
     }
@@ -230,7 +259,15 @@ export default function MusicLayout() {
     const sound = soundRef.current;
     if (sound && sound.playing()) {
       const time = sound.seek() as number;
-      setCurrentTime(time);
+      // 防抖+单调递增保护：有时底层 seek 报告会小于上一帧
+      const clamped = Math.max(time, lastTimeRef.current);
+      lastTimeRef.current = clamped;
+      setCurrentTime(clamped);
+      // 若接近结尾，强制钉在 duration，避免视觉回退
+      if (duration && clamped > duration - 0.05) {
+        setCurrentTime(duration);
+        lastTimeRef.current = duration;
+      }
       animationRef.current = requestAnimationFrame(updateCurrentTime);
     } else {
       if (animationRef.current) {
@@ -254,7 +291,7 @@ export default function MusicLayout() {
               className={controlIconClass}
               onClick={handlePrevious}
             />
-            {canPlay && playing ? (
+            {playing ? (
               <CirclePause
                 size={42}
                 className={playIconClass}

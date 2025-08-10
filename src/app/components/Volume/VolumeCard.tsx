@@ -1,22 +1,23 @@
 import React from "react";
-import { musicType, usePlayStore } from "@/store/playStore";
+import { usePlayStore } from "@/store/usePlayStore";
 import { Popover } from "antd";
 import { List, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { ITrack } from "../../../types/playlist";
 
 export default function VolumeCard() {
   const { clearPlayList, setCurrentMusic, setPlaying } = usePlayStore();
   const playList = usePlayStore((s) => s.playList);
   const currentMusic = usePlayStore((s) => s.currentMusic);
 
-  const handleSelect = (music: musicType) => {
+  const handleSelect = (music: ITrack) => {
     setCurrentMusic(music);
     setPlaying(true);
   };
 
   function handleClearPlayList(): void {
     clearPlayList();
-    setCurrentMusic({} as musicType);
+    setCurrentMusic({} as ITrack);
     setPlaying(false);
   }
 
@@ -41,7 +42,7 @@ export default function VolumeCard() {
         </div>
       ) : (
         playList.map((music, index) => {
-          const isActive = currentMusic?.id === music.id; 
+          const isActive = currentMusic?.id === music.id;
           return (
             <div
               key={index}
@@ -50,7 +51,7 @@ export default function VolumeCard() {
                 "group flex items-center p-2 pr-4 transition cursor-pointer rounded-lg relative " +
                 (isActive
                   ? "bg-blue-50 ring-2 ring-blue-400/50 shadow-md"
-                  : "hover:bg-gray-50 hover:shadow-sm")
+                  : "hover:bg-gray-200/60 hover:shadow-sm")
               }
               style={{
                 marginBottom: "4px",
@@ -64,7 +65,7 @@ export default function VolumeCard() {
                 )}
               </div>
               <Image
-                src={music.pic}
+                src={music.picUrl}
                 alt={music.name}
                 width={40}
                 height={40}
@@ -91,7 +92,7 @@ export default function VolumeCard() {
                       : "text-gray-500 group-hover:text-gray-700")
                   }
                 >
-                  {music.ar_name}
+                  {music.artists}
                 </div>
               </div>
             </div>

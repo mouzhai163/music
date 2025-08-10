@@ -1,30 +1,7 @@
 import { create } from "zustand";
+import { ITrack } from "../../types/playlist";
 
 export type PlayMode = "单曲" | "列表" | "循环" | "随机";
-
-export interface musicType {
-  id: string;
-  // 歌曲名称
-  name: string;
-  // 作者
-  ar_name: string;
-  // 歌曲清晰度等级
-  level: string;
-  // 歌词
-  lyric: string;
-  // 专辑名称
-  al_name: string;
-  // 图片地址
-  pic: string;
-  // 歌曲地址
-  url: string;
-  // 歌曲大小
-  size: string;
-  // 状态码
-  status: number;
-  // 未知
-  tlyric: string;
-}
 
 interface PlayStore {
   playing: boolean;
@@ -39,43 +16,20 @@ interface PlayStore {
   setVolume: (volume: number) => void;
   muted: boolean;
   setMuted: (muted: boolean) => void;
-  playList: musicType[];
-  setPlayList: (data: musicType[]) => void;
-  pushPlayList: (music: musicType) => void;
+  playList: ITrack[];
+  setPlayList: (data: ITrack[]) => void;
+  pushPlayList: (music: ITrack) => void;
+  addSongToPlayList: (music: ITrack) => void;
   popPlayList: () => void;
   clearPlayList: () => void;
-  currentMusic: musicType | null;
-  setCurrentMusic: (music: musicType) => void;
+  currentMusic: ITrack | null;
+  setCurrentMusic: (music: ITrack) => void;
   // 播放控制方法
   playNext: () => boolean; // 返回是否成功切换
   playPrevious: () => boolean; // 返回是否成功切换
   playRandom: () => boolean; // 随机播放
   getCurrentIndex: () => number; // 获取当前歌曲在播放列表中的索引
 }
-
-export const usePlayerStore = () =>
-  usePlayStore(
-    (state) => ({
-      playing: state.playing,
-      setPlaying: state.setPlaying,
-      currentTime: state.currentTime,
-      setCurrentTime: state.setCurrentTime,
-      duration: state.duration,
-      setDuration: state.setDuration,
-      playMode: state.playMode,
-      setPlayMode: state.setPlayMode,
-      volume: state.volume,
-      setVolume: state.setVolume,
-      muted: state.muted,
-      setMuted: state.setMuted,
-      currentMusic: state.currentMusic,
-      setCurrentMusic: state.setCurrentMusic,
-      playNext: state.playNext,
-      playPrevious: state.playPrevious,
-      playRandom: state.playRandom,
-      setPlayList: state.setPlayList,
-    })
-  );
 
 export const usePlayStore = create<PlayStore>((set, get) => ({
   // 是否播放
@@ -98,10 +52,20 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
   setMuted: (muted: boolean) => set({ muted }),
   // 播放列表
   playList: [],
-  setPlayList: (playList: musicType[]) => set({ playList }),
-  // 添加一首歌曲
-  pushPlayList: (music: musicType) =>
-    set((state) => ({ playList: [...state.playList, music] })),
+  setPlayList: (playList: ITrack[]) => set({ playList }),
+  // 添加一首歌曲 并且开始播放当前歌曲
+  pushPlayList: (music: ITrack) => {
+    set((state) => {
+      state.setCurrentMusic(music);
+      return { playList: [...state.playList, music] };
+    });
+  },
+  // 添加一首歌
+  addSongToPlayList: (music: ITrack) => {
+    set((state) => {
+      return { playList: [...state.playList, music] };
+    });
+  },
   // 弹出一首歌曲
   popPlayList: () =>
     set((state) => ({ playList: state.playList.slice(0, -1) })),
@@ -109,22 +73,21 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
   clearPlayList: () => set({ playList: [] }),
   // 当前播放的音乐
   currentMusic: null,
-  setCurrentMusic: (music: musicType) => set({ currentMusic: music }),
-
+  setCurrentMusic: (music: ITrack) => set({ currentMusic: music }),
 
   // 获取当前播放歌曲在播放列表中的下标
   getCurrentIndex: () => {
     const state = get();
     if (!state.currentMusic || state.playList.length === 0) return -1;
     return state.playList.findIndex(
-      (music: musicType) => music.id === state.currentMusic?.id
+      (music: ITrack) => music.id === state.currentMusic?.id
     );
   },
 
   // 切换下一首歌
   playNext: () => {
     const state = get();
-    // 播放方式  列表  
+    // 播放方式  列表
     const { playMode, playList, getCurrentIndex } = state;
 
     if (playList.length === 0) return false;
@@ -146,7 +109,7 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
     }
 
     const nextMusic = playList[nextIndex];
-    console.log("下一首歌:"+nextMusic.name)
+    console.log("下一首歌:" + nextMusic.name);
     if (nextMusic) {
       set({ currentMusic: nextMusic });
       return true;
