@@ -1,172 +1,480 @@
-'use client'
-import { Spin, Button, Table, Space, Avatar, message } from 'antd'
-import axios from 'axios'
-import React, { useEffect, useMemo, useState, use } from 'react'
-import Image from 'next/image'
-import type { IPlaylistDetail, ITrack } from '../../../../types/playlist'
-import { PlayCircleOutlined, PauseCircleOutlined, DownloadOutlined, HeartOutlined, PlusOutlined } from '@ant-design/icons'
+'use client';
+import React, { useEffect, useMemo, useState, use } from 'react';
+import Image from 'next/image';
+import axios from 'axios';
+import { Spin, Button, Table, Space, Avatar, message, Tag, Tooltip, Modal, Radio, Alert } from 'antd';
+import {
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  DownloadOutlined,
+  HeartOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import useDownloader from 'react-use-downloader';
-import { usePlayStore } from '@/store/usePlayStore'
 
+import { usePlayStore } from '@/app/store/usePlayStore';
+import { Song } from '@/types/album';
+import { Playlist, PlaylistDetailResponse } from '@/types/playlist';
+import { SongDataType } from '@/types/song_url';
 
-function SongTable({ tracks }: { tracks: ITrack[] }) {
-  const [downloadingId, setDownloadingId] = useState<string | number | null>(null);
+function SongTable({ tracks }: { tracks: Song[] }) {
   const [addingId, setAddingId] = useState<string | number | null>(null);
+  const [downloadModalVisible, setDownloadModalVisible] = useState(false);
+  const [selectedQuality, setSelectedQuality] = useState<string>('standard');
+  const [currentDownloadTrack, setCurrentDownloadTrack] = useState<Song | null>(null);
+  const { pushPlayList, addSongToPlayList, setCurrentMusic } = usePlayStore();
   const { download } = useDownloader();
-  const { pushPlayList, setPlaying, setCurrentMusic, playing, currentMusic, addSongToPlayList } = usePlayStore();
+
+  const currentMusic = usePlayStore((s) => s.currentMusic);
+  const howler = usePlayStore((s) => s.howler);
+
   const [messageApi, contextHolder] = message.useMessage();
   const success = (msg: string) => messageApi.success(msg);
   const errorMsg = (msg: string) => messageApi.error(msg);
 
+  // 用事件驱动的播放状态，保证按钮图标切换
+  const [isPlaying, setIsPlaying] = useState(false);
+  // 工具：根据可用音质返回标签数组
+  const getQualityTags = (s: Song): JSX.Element[] => {
+    const tags: JSX.Element[] = [];
+    if (s.hr) tags.push(<Tag key="hr" color="gold" style={{ fontSize: '11px', padding: '0 4px' }}>Hi-Res</Tag>);
+    if (s.sq) tags.push(<Tag key="sq" color="purple" style={{ fontSize: '11px', padding: '0 4px' }}>SQ</Tag>);
+    if (s.h) tags.push(<Tag key="h" color="default" style={{ fontSize: '11px', padding: '0 4px' }}>HQ</Tag>);
+    if (s.m) tags.push(<Tag key="m" color="blue" style={{ fontSize: '11px', padding: '0 4px' }}>MV</Tag>);
+    return tags.length > 0 ? tags : [<span key="none">-</span>];
+  };
+  // 工具：格式化毫秒为 mm:ss / hh:mm:ss
+  const formatDuration = (ms: number): string => {
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const mm = m.toString().padStart(2, '0');
+    const ss = s.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss.padStart(2, '0')}`;
+  };
+  useEffect(() => {
+    if (!howler) {
+      setIsPlaying(false);
+      return;
+    }
+    setIsPlaying(howler.playing());
 
-  const handlePlaying = async (track: ITrack) => {
-    pushPlayList(track)
-    success('开始播放：' + track.name)
-    setPlaying(true)
-  }
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onStop = () => setIsPlaying(false);
+    const onEnd = () => setIsPlaying(false);
 
+    howler.on('play', onPlay);
+    howler.on('pause', onPause);
+    howler.on('stop', onStop);
+    howler.on('end', onEnd);
 
-  const handleDownload = async (track: ITrack) => {
-    try {
-      setDownloadingId(track.id);
-      // 调用 song_v1 获取真实音频地址  这里可以抽象出来 等待修改
-      const res = await axios.get(`/api/song_v1?id=${track.id}`);
-      const data = res.data
-      if (data.code === 200) {
-        // 下载地址
-        const fileUrl: string = data.data.url
-        // 尝试从 url 推断扩展名
-        const ext = fileUrl.split('?')[0].split('.').pop() || 'mp3';
-        download(fileUrl, track.name + "." + ext)
+    return () => {
+      howler.off('play', onPlay);
+      howler.off('pause', onPause);
+      howler.off('stop', onStop);
+      howler.off('end', onEnd);
+    };
+  }, [howler]);
+
+  // 行内播放/暂停
+  const handlePlaying = (track: Song) => {
+    // 同一首：切换播放/暂停
+    if (currentMusic?.id === track.id) {
+      if (howler?.playing()) {
+        howler.pause();
+        success('暂停播放：' + track.name);
       } else {
-        throw new Error('下载失败!服务器出现错误!');
+        howler?.play();
+        success('继续播放：' + track.name);
       }
+      return;
+    }
+    // 切到另一首：推进队列并设为当前曲目，由全局播放器接管播放
+    pushPlayList(track);
+    setCurrentMusic(track);
+    success('开始播放：' + track.name);
+  };
+
+  // 显示音质选择弹窗
+  const showDownloadModal = (track: Song) => {
+    setCurrentDownloadTrack(track);
+    // 获取可用音质并设置默认选中第一个
+    const availableQualities = getAvailableQualities(track);
+    if (availableQualities.length > 0) {
+      setSelectedQuality(availableQualities[0].value);
+    }
+    setDownloadModalVisible(true);
+  };
+
+  // 实际执行下载
+  const handleDownload = async (track: Song, level: string) => {
+    try {
+      const req = await axios.post('/api/getSongById', { id: track.id, level });
+      const data: SongDataType = req.data;
+      if (data.code !== 200) {
+        throw new Error('参数有误! 或者服务器异常!');
+      }
+      const url = data.data[0].url;
+      const ext = url.split('?')[0].split('.').pop() || 'mp3';
+
+      // 使用 Next.js 代理路径解决跨域问题 很笨的办法 但是很有效
+      let proxyUrl = url;
+      if (url.includes('m704.music.126.net')) {
+        proxyUrl = url.replace('http://m704.music.126.net', '/proxy/music');
+      } else if (url.includes('m804.music.126.net')) {
+        proxyUrl = url.replace('http://m804.music.126.net', '/proxy/music2');
+      }
+
+      download(proxyUrl.split('?')[0], `${track.name}.${ext}`);
+
     } catch (e) {
-      console.error('下载失败', e);
-    } finally {
-      setDownloadingId(null);
+      const msg = e instanceof Error ? e.message : String(e);
+      errorMsg(msg);
     }
   };
 
-  const actionBtnClass = "!inline-flex !items-center !justify-center !w-9 !h-9 !p-0 !leading-none !rounded-full !border !border-gray-200 hover:!bg-gray-50 hover:!shadow-md transition";
-  const columns: import('antd').TableProps<ITrack>['columns'] = [
-    {
-      title: '', dataIndex: 'picUrl', key: 'picUrl', width: 36, render: (url: string) => (
-        <Avatar shape="square" size={48} src={url} />
-      )
-    },
-    { title: '歌曲名', dataIndex: 'name', key: 'name', ellipsis: true, width: 300, onCell: () => ({ style: { paddingLeft: 8 } }) },
-    { title: '歌手', dataIndex: 'artists', key: 'artists', width: 170 },
-    { title: '专辑', dataIndex: 'album', key: 'album', width: 220, ellipsis: true },
-    {
-      title: '操作', key: 'actions', width: 160,
-      render: (_: unknown, record: ITrack) => (
-        <Space>
-          <Button className={actionBtnClass} type="text" shape="circle" icon={(playing && currentMusic?.id === String(record.id)) ? <PauseCircleOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} /> : <PlayCircleOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} />} aria-label="播放" onClick={() => handlePlaying(record)} />
-          <Button className={actionBtnClass} type="text" shape="circle" icon={<PlusOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} />} aria-label="添加到歌单" loading={addingId === record.id} onClick={async () => {
-            try {
-              setAddingId(record.id)
-              // 这里抽象出来, 这里只负责添加ITrack对象即可,播放由howl实例去获取src
-              addSongToPlayList(record)
-              success('已添加到歌单：' + record.name)
-            } catch (e) {
-              errorMsg('添加失败：网络异常')
-            } finally {
-              setAddingId(null)
-            }
-          }} />
-          <Button className={actionBtnClass} type="text" shape="circle" icon={<DownloadOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} />} aria-label="下载" loading={downloadingId === record.id} onClick={async () => {
-            try {
-              setDownloadingId(record.id)
-              const res = await axios.get(`/api/song_v1?id=${record.id}`)
-              if (res.data.code === 200) {
-                const fileUrl: string = res.data.data.url
-                const ext = fileUrl.split('?')[0].split('.').pop() || 'mp3';
-                download(fileUrl, `${record.name}.${ext}`)
-                success('开始下载：' + record.name)
-              } else {
-                errorMsg('下载失败：服务器返回错误')
-              }
-            } catch (e) {
-              errorMsg('下载失败：网络异常')
-            } finally {
-              setDownloadingId(null)
-            }
-          }} />
-        </Space>
-      )
+  // 获取歌曲可用音质选项
+  const getAvailableQualities = (track: Song) => {
+    const qualities = [];
+
+    if (track.l) {
+      qualities.push({
+        value: 'standard',
+        label: '标准音质',
+        desc: '128kbps',
+        bitrate: track.l.br
+      });
     }
+
+    if (track.m) {
+      qualities.push({
+        value: 'higher',
+        label: '较高音质',
+        desc: '192kbps',
+        bitrate: track.m.br
+      });
+    }
+
+    if (track.h) {
+      qualities.push({
+        value: 'exhigh',
+        label: '极高音质',
+        desc: '320kbps',
+        bitrate: track.h.br
+      });
+    }
+
+    if (track.sq) {
+      qualities.push({
+        value: 'lossless',
+        label: '无损音质',
+        desc: 'SQ',
+        bitrate: track.sq.br
+      });
+    }
+
+    if (track.hr) {
+      qualities.push({
+        value: 'hires',
+        label: 'Hi-Res音质',
+        desc: 'Hi-Res',
+        bitrate: track.hr.br
+      });
+    }
+
+    return qualities;
+  };
+
+  // 确认下载
+  const confirmDownload = () => {
+    if (currentDownloadTrack) {
+      const qualities = getAvailableQualities(currentDownloadTrack);
+      const selectedQualityInfo = qualities.find(q => q.value === selectedQuality);
+      const qualityLabel = selectedQualityInfo ? selectedQualityInfo.label : selectedQuality;
+
+      messageApi.success(`开始下载：${currentDownloadTrack.name} (${qualityLabel})`);
+      handleDownload(currentDownloadTrack, selectedQuality);
+      setDownloadModalVisible(false);
+      setCurrentDownloadTrack(null);
+    }
+  };
+
+  const actionBtnClass =
+    '!inline-flex !items-center !justify-center !w-9 !h-9 !p-0 !leading-none !rounded-full !border !border-gray-200 hover:!bg-gray-50 hover:!shadow-md transition';
+
+  const columns: import('antd').TableProps<Song>['columns'] = [
+    {
+      title: '',
+      dataIndex: ['al', 'picUrl'],
+      key: 'picUrl',
+      width: 36,
+      render: (url?: string) => <Avatar shape="square" size={48} src={url} />,
+    },
+    {
+      title: '歌曲名',
+      dataIndex: 'name',
+      key: 'name',
+      ellipsis: true,
+      width: 150,
+      onCell: () => ({ style: { paddingLeft: 8 } }),
+      render: (_: unknown, r: Song) => (
+        <Space size={6}>
+          <span>{r.name}</span>
+          {r.fee && r.fee > 0 ? (
+            <Tag color="gold" style={{ marginLeft: 4 }}>VIP</Tag>
+          ) : null}
+        </Space>
+      ),
+    },
+    {
+      title: '歌手',
+      dataIndex: 'ar',
+      key: 'artists',
+      width: 150,
+      render: (_: unknown, r: Song) => r.ar?.map((a) => a.name).join(' / ') || '-',
+    },
+    { title: '专辑', dataIndex: ['al', 'name'], key: 'album', width: 150, ellipsis: true },
+    {
+      title: '音质',
+      key: 'quality',
+      width: 150,
+      render: (_: unknown, r: Song) => (
+        <Space size={4} wrap>
+          {getQualityTags(r)}
+        </Space>
+      ),
+    },
+    {
+      title: '时长',
+      dataIndex: 'dt',
+      key: 'duration',
+      width: 150,
+      render: (dt: number) => formatDuration(dt),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 150,
+      render: (_: unknown, record: Song) => {
+        const rowIsPlaying = isPlaying && currentMusic?.id === record.id;
+        return (
+          <Space>
+            <Button
+              className={actionBtnClass}
+              type="text"
+              shape="circle"
+              icon={
+                rowIsPlaying ? (
+                  <PauseCircleOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} />
+                ) : (
+                  <PlayCircleOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} />
+                )
+              }
+              aria-label="播放"
+              onClick={() => handlePlaying(record)}
+            />
+            <Button
+              className={actionBtnClass}
+              type="text"
+              shape="circle"
+              icon={<PlusOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} />}
+              aria-label="添加到歌单"
+              loading={addingId === record.id}
+              onClick={async () => {
+                try {
+                  setAddingId(record.id);
+                  addSongToPlayList(record);
+                  messageApi.success('已添加到歌单：' + record.name);
+                } catch {
+                  errorMsg('添加失败：网络异常');
+                } finally {
+                  setAddingId(null);
+                }
+              }}
+            />
+            <Button
+              className={actionBtnClass}
+              type="text"
+              shape="circle"
+              icon={<DownloadOutlined style={{ fontSize: 20, verticalAlign: 'middle' }} />}
+              aria-label="下载"
+              onClick={() => showDownloadModal(record)}
+            />
+          </Space>
+        );
+      },
+    },
   ];
 
-  const dataSource = useMemo(() => tracks.map((t, idx) => ({ key: t.id ?? idx, ...t })), [tracks]);
+  const dataSource = useMemo(
+    () => tracks.map((t, idx) => ({ key: t.id ?? idx, ...t })),
+    [tracks]
+  );
 
   return (
     <>
       {contextHolder}
-      <Table<ITrack>
-        columns={columns}
-        dataSource={dataSource}
-        rowKey={(r) => String(r.id)}
-      />
+      <Table<Song> columns={columns} dataSource={dataSource} rowKey={(r) => String(r.id)} />
+
+      {/* 音质选择弹窗 */}
+      <Modal
+        title="选择下载音质"
+        open={downloadModalVisible}
+        onOk={confirmDownload}
+        onCancel={() => setDownloadModalVisible(false)}
+        okText="下载"
+        cancelText="取消"
+        width={400}
+      >
+        <div className="py-4">
+          <p className="mb-4 text-gray-600">
+            歌曲：<span className="font-medium">{currentDownloadTrack?.name}</span>
+          </p>
+
+          {/* 账号权限提示 */}
+          <Alert
+            message="当前账号为黑胶账号，可能下载不了最高品质"
+            type="warning"
+            showIcon
+            className="!my-4"
+          />
+
+          <Radio.Group
+            value={selectedQuality}
+            onChange={(e) => setSelectedQuality(e.target.value)}
+            className="w-full"
+          >
+            <div className="space-y-3">
+              {currentDownloadTrack && getAvailableQualities(currentDownloadTrack).map((quality) => (
+                <Radio key={quality.value} value={quality.value} className="w-full">
+                  <div className="flex justify-between items-center w-full">
+                    <span>{quality.label}</span>
+                    <span className="text-gray-400 text-sm">
+                      {quality.bitrate ? `${Math.round(quality.bitrate / 1000)}kbps` : quality.desc}
+                    </span>
+                  </div>
+                </Radio>
+              ))}
+              {currentDownloadTrack && getAvailableQualities(currentDownloadTrack).length === 0 && (
+                <div className="text-gray-500 text-center py-4">
+                  该歌曲暂无可用音质
+                </div>
+              )}
+            </div>
+          </Radio.Group>
+        </div>
+      </Modal>
     </>
   );
 }
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  const [playlist, setPlayList] = useState<IPlaylistDetail | null>(null)
-  const [spinning, setSpinning] = useState<boolean>(false)
+  const [localPlayList, setLocalPlayList] = useState<Playlist | null>(null);
+  const [spinning, setSpinning] = useState<boolean>(false);
+
+  const { setPlayList, setCurrentMusic } = usePlayStore();
 
   async function getPlayListByid(id: string) {
-    setSpinning(true)
+    setSpinning(true);
     try {
-      const res = await axios.get(`http://127.0.0.1:5000/Playlist?id=${id}`)
-      const data = res.data
-      if (data?.status === 200) {
-        setPlayList(data.playlist)
+      const res = await axios.post('/api/getPlaylistById', { id });
+      const data: PlaylistDetailResponse = res.data;
+      if (data.code === 200) {
+        setLocalPlayList(data.playlist);
       }
     } catch (err) {
-      console.error('获取歌单失败:', err)
+      console.error('获取歌单失败:', err);
     } finally {
-      setSpinning(false)
+      setSpinning(false);
     }
   }
 
   const { id } = use(params);
 
   useEffect(() => {
-    let mounted = true;
     (async () => {
-      await getPlayListByid(id)
-    })()
-    return () => {
-      mounted = false
-    }
-  }, [id])
+      await getPlayListByid(id);
+    })();
+  }, [id]);
 
   return (
     <div>
       <Spin spinning={spinning} tip="加载中~" fullscreen />
-      {!spinning && playlist && (
+      {!spinning && localPlayList && (
         <div className="p-6 space-y-6">
           {/* 顶部信息 */}
           <div className="flex items-start gap-6">
-            <div className="relative w-[160px] h-[160px] overflow-hidden rounded-lg shadow">
-              <Image src={playlist.coverImgUrl} alt={playlist.name} fill className="object-cover" />
+            <div className="relative w-[240px] h-[240px] overflow-hidden rounded-lg shadow">
+              <Image
+                src={localPlayList.coverImgUrl}
+                alt={localPlayList.name}
+                fill
+                className="object-cover"
+              />
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl  mb-2">{playlist.name}</h1>
-              <div className="text-sm text-gray-600 mb-4">创建者：{playlist.creator}</div>
+              <h1 className="text-2xl mb-2">{localPlayList.name}</h1>
+              {/* 第一行：仅创作者 */}
+              <div className="flex items-center gap-4 text-sm text-gray-600 mb-1">
+                <span>创建者：{localPlayList.creator.nickname}</span>
+              </div>
+              {/* 第二行：其余统计信息 */}
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-2">
+                <span>播放量：{localPlayList.playCount}</span>
+                <span>曲目数：{localPlayList.trackCount}</span>
+                <span>收藏数：{localPlayList.subscribedCount}</span>
+                <span>
+                  更新时间：{new Date(localPlayList.updateTime).toLocaleString()}
+                </span>
+              </div>
+              {/* 第三行：标签 */}
+              {localPlayList.tags?.length > 0 && (
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  {localPlayList.tags.map((t) => (
+                    <Tag key={t} color="blue">
+                      {t}
+                    </Tag>
+                  ))}
+                </div>
+              )}
+              <div className="text-base text-gray-700 mb-4 whitespace-pre-wrap">
+                {localPlayList.description}
+              </div>
+              {localPlayList.subscribers?.length > 0 && (
+                <div className="mb-3">
+                  <Avatar.Group max={{ count: 12 }} size="small">
+                    {localPlayList.subscribers.slice(0, 12).map((u) => (
+                      <Tooltip key={u.userId} title={u.nickname}>
+                        <Avatar src={u.avatarUrl} alt={u.nickname} draggable="true" />
+                      </Tooltip>
+                    ))}
+                  </Avatar.Group>
+                </div>
+              )}
               <Space>
-                <Button type="primary" icon={<PlayCircleOutlined />}>播放全部</Button>
+                <Button
+                  type="primary"
+                  icon={<PlayCircleOutlined />}
+                  onClick={() => {
+                    setPlayList(localPlayList.tracks);
+                    if (localPlayList.tracks.length > 0) {
+                      setCurrentMusic(localPlayList.tracks[0]); // 让全局播放器接管并开始播放
+                    }
+                  }}
+                >
+                  播放全部
+                </Button>
                 <Button icon={<HeartOutlined />}>收藏</Button>
               </Space>
             </div>
           </div>
 
           {/* 歌曲列表 */}
-          <SongTable tracks={playlist.tracks} />
+          <SongTable tracks={localPlayList.tracks} />
         </div>
       )}
     </div>
-  )
+  );
 }

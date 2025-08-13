@@ -1,24 +1,26 @@
 import React from "react";
 import Image from "next/image";
-import { usePlayStore } from "@/store/usePlayStore";
+import { usePlayStore } from "@/app/store/usePlayStore";
 
 export default function VolumeInfo() {
-  const { playing, currentMusic } = usePlayStore();
+  const currentMusic = usePlayStore((s) => (s.currentMusic))
+  const playing = usePlayStore((s) => (s.playing))
 
   return (
     <div className="flex items-center justify-center gap-4 w-full h-full">
       {/* 专辑封面 */}
-      <div className={`relative flex-shrink-0 ${playing ? "ripple-effect" : ""}`}>
-        {currentMusic && currentMusic.picUrl ? (
-          <Image
-            src={currentMusic.picUrl}
-            alt={currentMusic.name || "封面"}
-            width={60}
-            height={60}
-            className={`rounded-full object-cover transition-all duration-300 album-rotate ${!playing ? "pause-rotation" : ""
-              }`}
-            unoptimized
-          />
+      <div className={`relative w-[60px] h-[60px] flex-shrink-0 ${playing ? "ripple-effect" : ""}`}>
+        {currentMusic && Object.keys(currentMusic).length > 0 ? (
+          <div className="relative w-[60px] h-[60px]">
+            <Image
+              src={currentMusic.al.picUrl}
+              alt={currentMusic.name || "封面"}
+              fill
+              sizes="60px"
+              className={`rounded-full object-cover transition-all duration-300 album-rotate ${!playing ? "pause-rotation" : ""}`}
+              unoptimized
+            />
+          </div>
         ) : (
           <div className="w-15 h-15 bg-gray-200 rounded-full flex items-center justify-center">
             <span className="text-gray-500 text-xs">暂无</span>
@@ -35,8 +37,8 @@ export default function VolumeInfo() {
           className="text-sm text-gray-500 truncate"
           title={`${currentMusic?.name} - ${currentMusic?.name}`}
         >
-          {currentMusic?.artists && currentMusic?.album
-            ? `${currentMusic.artists} - ${currentMusic.album}`
+          {currentMusic && Object.keys(currentMusic).length > 0
+            ? `${currentMusic.ar[0].name} - ${currentMusic.al.name}`
             : ""}
         </div>
       </div>

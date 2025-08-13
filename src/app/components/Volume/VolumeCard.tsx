@@ -1,24 +1,25 @@
 import React from "react";
-import { usePlayStore } from "@/store/usePlayStore";
+import { usePlayStore } from "@/app/store/usePlayStore";
 import { Popover } from "antd";
 import { List, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { ITrack } from "../../../types/playlist";
+import { Song } from "@/types/album";
 
 export default function VolumeCard() {
-  const { clearPlayList, setCurrentMusic, setPlaying } = usePlayStore();
+  const { clearPlayList, setCurrentMusic } = usePlayStore();
   const playList = usePlayStore((s) => s.playList);
+  const howler = usePlayStore((s) => s.howler);
   const currentMusic = usePlayStore((s) => s.currentMusic);
 
-  const handleSelect = (music: ITrack) => {
+  const handleSelect = (music: Song) => {
     setCurrentMusic(music);
-    setPlaying(true);
+    howler?.play()
   };
 
   function handleClearPlayList(): void {
     clearPlayList();
-    setCurrentMusic({} as ITrack);
-    setPlaying(false);
+    setCurrentMusic(null);
+    howler?.unload()
   }
 
   const popoverTitle = (
@@ -64,14 +65,16 @@ export default function VolumeCard() {
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 shadow animate-pulse"></span>
                 )}
               </div>
-              <Image
-                src={music.picUrl}
-                alt={music.name}
-                width={40}
-                height={40}
-                className="rounded object-cover mx-2 shadow"
-                unoptimized
-              />
+              <div className="relative w-[40px] h-[40px] mx-2">
+                <Image
+                  src={music.al.picUrl}
+                  alt={music.name}
+                  fill
+                  sizes="40px"
+                  className="rounded object-cover shadow"
+                  unoptimized
+                />
+              </div>
 
               <div className="flex-1 overflow-hidden">
                 <div
@@ -92,7 +95,7 @@ export default function VolumeCard() {
                       : "text-gray-500 group-hover:text-gray-700")
                   }
                 >
-                  {music.artists}
+                  {music.ar[0].name}
                 </div>
               </div>
             </div>

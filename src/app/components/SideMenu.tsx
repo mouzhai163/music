@@ -3,7 +3,7 @@
 import React from 'react'
 import {
   HomeOutlined,
-  CustomerServiceOutlined,
+  SearchOutlined,
   UserOutlined,
   HeartOutlined,
   UnorderedListOutlined,
@@ -14,8 +14,7 @@ import clsx from 'clsx'
 
 const menuItems = [
   { label: '推荐', icon: <HomeOutlined />, key: '/' },
-  { label: '曲库', icon: <CustomerServiceOutlined />, key: '/library', group: '发现' },
-  { label: '歌手', icon: <UserOutlined />, key: '/artist', group: '发现' },
+  { label: '搜索', icon: <SearchOutlined />, key: '/search', group: '发现' },
   { label: '歌单', icon: <UnorderedListOutlined />, key: '/playlist', group: '发现' },
   { label: '喜欢', icon: <HeartOutlined />, key: '/favorites', group: '我的' },
   { label: '个人中心', icon: <UserOutlined />, key: '/profile', group: '我的' },

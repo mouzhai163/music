@@ -29,10 +29,6 @@ svg {
   user-select: none;
 }
 
-.progress-bar:active {
-  cursor: grabbing;
-}
-
 /* 专辑封面旋转动画 */
 @keyframes rotate {
   from {
