@@ -1,7 +1,7 @@
 import { callEapi, getCacheKey } from "./neteaseParse";
 
 /**
- * 通过ID查询专辑信息
+ * 通过ID查询指定专辑信息
  * @argument id 专辑ID
  * @argument cookie 账号cookie
  * @returns
@@ -16,14 +16,14 @@ export async function getAlbumsById(id: string, cookie = "") {
   return callEapi<unknown>({
     hostname: "interface3.music.163.com",
     eapiPath: "/eapi/album/v3/detail",
-    apiPath: "/api/album/v3/detail", // 签名必须是 /api/...
+    apiPath: "/api/album/v3/detail",
     data,
     cookie,
   });
 }
 
 /**
- * 通过ID查询歌单信息
+ * 通过ID查询指定歌单信息
  * @argument id 歌单ID
  * @argument cookie 账号cookie
  * @returns
@@ -40,14 +40,14 @@ export async function getPlaylistById(id: string, cookie = "") {
   return callEapi<unknown>({
     hostname: "interface3.music.163.com",
     eapiPath: "/eapi/playlist/v4/detail",
-    apiPath: "/api/playlist/v4/detail", // 签名必须是 /api/...
+    apiPath: "/api/playlist/v4/detail",
     data,
     cookie,
   });
 }
 /**
  * 备用 - 通过ID查询歌单信息
- * 这接口我他妈自己都不知道是从哪里扒 GPT六百六十六啊
+ * 这接口我他妈自己都不知道是从哪里扒 GPT六百六十六啊  但是可以用!!
  * @argument id 歌单ID
  * @argument cookie 账号cookie
  * @returns 返回result
@@ -73,7 +73,7 @@ export async function getPlaylistById(id: string, cookie = "") {
 // }
 
 /**
- *搜索歌手名返回歌手歌单
+ *搜索歌手名返回歌手歌曲
  * @param keyword 歌手名
  * @param cookie 账号cookie
  * @param opts limit 返回多少个参数 默认为10
@@ -104,7 +104,8 @@ export async function searchSingerName(
 }
 
 /**
- *
+ * 通过ID获取单曲
+ *  @params: ids 歌曲ID
  */
 export async function getSongById(
   ids: Array<string | number>, // 传裸 id 或 "id_0" 均可，函数里统一处理
@@ -138,4 +139,67 @@ export async function getSongById(
     data,
     cookie,
   });
+}
+
+
+/**
+ * 通过歌手ID查询指定歌手所有专辑
+ * @param id 歌手ID
+ * @param cookie 账号cookie
+ * @returns
+ */
+export async function getAllAlbumsByArtistId(id: string, cookie = "") {
+  const data: Record<string, unknown> = {
+    limit:1000,
+  };
+
+  return callEapi<unknown>({
+    hostname: "interface3.music.163.com",
+    eapiPath: `/eapi/artist/albums/${id}`,
+    apiPath: `/api/artist/albums/${id}`,
+    data,
+    cookie,
+  });
+}
+
+
+/**
+ * 搜索歌手
+ * @param id 歌手名
+ * @param cookie 
+ * @returns 
+ */
+export async function searchSingerBySingerName(id: string, cookie = "") {
+  const data: Record<string, unknown> = {
+    limit:1000,
+  };
+
+  return callEapi<unknown>({
+    hostname: "interface3.music.163.com",
+    eapiPath: `/eapi/artist/albums/${id}`,
+    apiPath: `/api/artist/albums/${id}`,
+    data,
+    cookie,
+  });
+}
+
+
+/**
+ * 综合搜索 适用于首页刚开始点击搜索功能
+ * @param keyword 可以是歌手名 也可以是歌曲名
+ */
+export async function complexSearch(keyword: string, cookie = "") {
+  const data: Record<string, unknown> = {
+    keyword,
+    channel: 'history',
+    needCorrect: 'true',
+    scene: 'normal',
+  };
+  return callEapi<unknown>({
+    hostname: "interface3.music.163.com",
+    eapiPath: "/eapi/search/complex/page/v3",
+    apiPath: "/api/search/complex/page/v3",
+    data,
+    cookie,
+  })
 }

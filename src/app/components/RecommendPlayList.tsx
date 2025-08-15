@@ -5,7 +5,7 @@ import { Typography, List, Card, Space } from "antd";
 import Image from "next/image";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import { Playlist, PlaylistDetailResponse } from "@/types/playlist";
+import { Playlist } from "@/types/playlist";
 
 const { Title, Text } = Typography;
 

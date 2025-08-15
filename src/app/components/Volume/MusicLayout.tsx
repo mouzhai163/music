@@ -43,7 +43,7 @@ export default function MusicLayout() {
   const isPlaying = usePlayStore((s) => s.playing);
 
   const [messageApi, contextHolder] = message.useMessage();
-  
+
   // 包装 store 方法以添加消息提示
   const handlePlayPause = () => {
     const success = handleSongPause();
@@ -51,14 +51,14 @@ export default function MusicLayout() {
       messageApi.warning("当前没有可播放的歌曲哦~");
     }
   };
-  
+
   const handlePrevious = () => {
     const success = handleSongPrevious();
     if (!success) {
       messageApi.warning("没有上一首歌曲了~");
     }
   };
-  
+
   const handleModeToggle = () => {
     const message = handleTogglePlayMode();
     if (message) {
@@ -107,16 +107,6 @@ export default function MusicLayout() {
   }, [currentMusic])
 
 
-
-
-
-
-
-
-
-
-
-
   // 时间格式化
   const formatTime = (time: number) => {
     const min = Math.floor((time || 0) / 60);
@@ -127,16 +117,16 @@ export default function MusicLayout() {
   // 进度条点击处理
   const handleProgressBarClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!duration || !howlInstance) return;
-    
+
     const progressBar = event.currentTarget;
     const rect = progressBar.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const progressBarWidth = rect.width;
-    
+
     // 计算点击位置对应的时间
     const clickRatio = clickX / progressBarWidth;
     const targetTime = clickRatio * duration;
-    
+
     // 跳转到目标时间
     howlInstance.seek(targetTime);
     seekTo(targetTime);

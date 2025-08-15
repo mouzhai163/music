@@ -56,11 +56,11 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
   // 全局 Howl 实例状态
   howlInstance: null,
   setHowlInstance: (howl: Howl | null) => set({ howlInstance: howl }),
-  
+
   // 全局 howler 实例
   createHowlerInstance: (obj) => {
     let progressInterval: NodeJS.Timeout | null = null;
-    
+
     const Howlobj = new Howl({
       src: [obj.url.split("?")[0]],
       html5: true,
@@ -70,7 +70,7 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
       onplay: () => {
         Howlobj.fade(0, get().volume, 300);
         get().setPlaying(true);
-        
+
         // 开始进度更新定时器
         progressInterval = setInterval(() => {
           const currentTime = Howlobj.seek() as number;
@@ -101,11 +101,11 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
           progressInterval = null;
         }
         get().setCurrentTime(0);
-        
+
         // 根据播放模式自动切歌
         const state = get();
         switch (state.playMode) {
-          case "单曲":
+          case "单曲": {
             // 单曲循环：直接重新播放当前歌曲
             setTimeout(() => {
               if (Howlobj && state.currentMusic) {
@@ -114,12 +114,11 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
               }
             }, 100);
             break;
-          case "列表":
-          case "循环":
-            // 列表循环：播放下一首，到最后一首就回到第一首
+          }
+          case "循环": {
+            // 循环模式：到最后一首回到第一首；只有一首歌则重复当前
             setTimeout(() => {
-              // 如果列表只有一首歌，直接重新播放当前歌曲
-              if (state.playList.length === 1) {
+              if (state.playList.length <= 1) {
                 if (Howlobj && state.currentMusic) {
                   Howlobj.seek(0);
                   Howlobj.play();
@@ -129,19 +128,34 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
               }
             }, 100);
             break;
-          case "随机":
-            // 随机播放：随机选择下一首
+          }
+          case "列表": {
+            // 列表模式：到列表末尾应停止
             setTimeout(() => {
-              state.playRandom();
+              const advanced = state.playNext();
+              if (!advanced) {
+                set({ playing: false });
+              }
             }, 100);
             break;
+          }
+          case "随机": {
+            // 随机模式：随机选择下一首，若失败则停止
+            setTimeout(() => {
+              const ok = state.playRandom();
+              if (!ok) {
+                set({ playing: false });
+              }
+            }, 100);
+            break;
+          }
         }
       },
     });
-    
+
     // 将 Howl 实例保存到 store 中
     get().setHowlInstance(Howlobj);
-    
+
     Howlobj.play();
     return Howlobj;
   },
@@ -337,7 +351,7 @@ export const usePlayStore = create<PlayStore>((set, get) => ({
     if (!state.currentMusic || !state.howlInstance) {
       return false; // 返回 false 表示操作失败
     }
-    
+
     if (state.playing) {
       state.howlInstance.pause();
     } else {

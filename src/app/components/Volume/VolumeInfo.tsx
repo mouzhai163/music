@@ -1,5 +1,6 @@
 import React from "react";
-import Image from "next/image";
+import { Image } from "antd";
+
 import { usePlayStore } from "@/app/store/usePlayStore";
 
 export default function VolumeInfo() {
@@ -15,10 +16,11 @@ export default function VolumeInfo() {
             <Image
               src={currentMusic.al.picUrl}
               alt={currentMusic.name || "封面"}
-              fill
               sizes="60px"
               className={`rounded-full object-cover transition-all duration-300 album-rotate ${!playing ? "pause-rotation" : ""}`}
-              unoptimized
+              preview={{
+                maskClassName: "rounded-full"
+              }}
             />
           </div>
         ) : (
