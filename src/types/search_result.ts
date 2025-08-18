@@ -47,12 +47,8 @@ export interface SongPrivilege {
   bd: unknown | null;
 }
 
-export interface SimpleSongData extends Song {
-  privilege: SongPrivilege;
-}
-
 export interface BaseInfo {
-  simpleSongData: SimpleSongData;
+  simpleSongData: Song;
   metaData: string[]; // 例如 ["VIP", "HiRes", "SQ"]
 }
 

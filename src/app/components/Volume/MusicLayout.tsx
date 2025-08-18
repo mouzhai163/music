@@ -210,11 +210,11 @@ export default function MusicLayout() {
             muted={muted}
             onChange={(v) => {
               setVolume(v);
-              // howlerRef.current?.volume(v);
+              howlInstance?.volume(v);
             }}
             onMuteChange={(m) => {
               setMuted(m);
-              // howlerRef.current?.mute(m);
+              howlInstance?.mute(m);
             }}
           />
         </div>

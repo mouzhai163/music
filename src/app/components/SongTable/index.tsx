@@ -14,11 +14,8 @@ import { usePlayStore } from '@/app/store/usePlayStore';
 import { Song } from '@/types/album';
 import { SongDataType } from '@/types/song_url';
 
-interface SongTableProps {
-  tracks: Song[];
-}
 
-export default function SongTable({ tracks }: SongTableProps) {
+export default function SongTable({ tracks }: {tracks: Song[]}) {
   const [addingId, setAddingId] = useState<string | number | null>(null);
   const [downloadModalVisible, setDownloadModalVisible] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<string>('standard');
@@ -204,7 +201,7 @@ export default function SongTable({ tracks }: SongTableProps) {
   };
 
   const actionBtnClass =
-    '!inline-flex !items-center !justify-center !w-9 !h-9 !p-0 !leading-none !rounded-full !border !border-gray-200 hover:!bg-gray-50 hover:!shadow-md transition';
+    '!inline-flex !items-center !justify-center !w-9 !h-9 !p-0 !leading-none !rounded-full !border !border-gray-200 hover:!bg-gray-150 hover:!shadow-md transition';
 
   const columns: import('antd').TableProps<Song>['columns'] = [
     {

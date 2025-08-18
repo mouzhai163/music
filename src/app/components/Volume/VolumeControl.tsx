@@ -30,27 +30,35 @@ const VolumeControl: React.FC<VolumeControlProps> = ({
     const v = Number(e.target.value)
     if (onChange) onChange(v)
     else setInternalVolume(v)
-    // 自动处理静音
-    if (onMuteChange) onMuteChange(v === 0)
-    else setInternalMuted(v === 0)
-    if (v > 0) prevVolume.current = v
+    // 只有当拖动滑块到0时才自动静音，拖动到非0时取消静音
+    if (v === 0) {
+      if (onMuteChange) onMuteChange(true)
+      else setInternalMuted(true)
+    } else {
+      if (onMuteChange) onMuteChange(false)
+      else setInternalMuted(false)
+      prevVolume.current = v
+    }
   }
 
   // 一键静音/恢复
   const handleToggleMute = () => {
-    if (realMuted || realVolume === 0) {
+    if (realMuted) {
       // 取消静音，恢复音量
       const resume = prevVolume.current || 1
-      if (onChange) onChange(resume)
-      else setInternalVolume(resume)
       if (onMuteChange) onMuteChange(false)
       else setInternalMuted(false)
+      if (onChange) onChange(resume)
+      else setInternalVolume(resume)
     } else {
-      prevVolume.current = realVolume
-      if (onChange) onChange(0)
-      else setInternalVolume(0)
+      // 静音，保存当前音量
+      if (realVolume > 0) {
+        prevVolume.current = realVolume
+      }
       if (onMuteChange) onMuteChange(true)
       else setInternalMuted(true)
+      if (onChange) onChange(0)
+      else setInternalVolume(0)
     }
   }
 

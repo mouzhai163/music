@@ -8,18 +8,18 @@ import { Song } from "@/types/album";
 export default function VolumeCard() {
   const { clearPlayList, setCurrentMusic } = usePlayStore();
   const playList = usePlayStore((s) => s.playList);
-  const howler = usePlayStore((s) => s.howler);
+  const howlInstance = usePlayStore((s) => s.howlInstance);
   const currentMusic = usePlayStore((s) => s.currentMusic);
 
   const handleSelect = (music: Song) => {
     setCurrentMusic(music);
-    howler?.play()
+    howlInstance?.play()
   };
 
   function handleClearPlayList(): void {
     clearPlayList();
     setCurrentMusic(null);
-    howler?.unload()
+    howlInstance?.unload()
   }
 
   const popoverTitle = (

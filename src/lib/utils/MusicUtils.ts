@@ -76,7 +76,7 @@ export async function getPlaylistById(id: string, cookie = "") {
  *搜索歌手名返回歌手歌曲
  * @param keyword 歌手名
  * @param cookie 账号cookie
- * @param opts limit 返回多少个参数 默认为10
+ * @param opts limit 返回多少个参数 默认为20
  * @returns
  */
 export async function searchSingerName(
@@ -86,7 +86,7 @@ export async function searchSingerName(
     limit?: number;
   }
 ) {
-  const { limit = 10 } = opts || {};
+  const { limit = 20 } = opts || {};
 
   const data: Record<string, unknown> = {
     keyword,
@@ -171,13 +171,14 @@ export async function getAllAlbumsByArtistId(id: string, cookie = "") {
  */
 export async function searchSingerBySingerName(id: string, cookie = "") {
   const data: Record<string, unknown> = {
-    limit:1000,
+    limit:20,
+    s:id,
   };
 
   return callEapi<unknown>({
     hostname: "interface3.music.163.com",
-    eapiPath: `/eapi/artist/albums/${id}`,
-    apiPath: `/api/artist/albums/${id}`,
+    eapiPath: `/eapi/v1/search/artist/get`,
+    apiPath: `/api/v1/search/artist/get`,
     data,
     cookie,
   });
