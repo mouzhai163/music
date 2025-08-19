@@ -82,16 +82,17 @@ export async function getPlaylistById(id: string, cookie = "") {
 export async function searchSingerName(
   keyword: string,
   cookie: string,
-  opts?: {
-    limit?: number;
+  options?:{
+    limit:number,
+    offset:number
   }
 ) {
-  const { limit = 20 } = opts || {};
-
   const data: Record<string, unknown> = {
     keyword,
-    limit,
+    // 接口默认只返回20条 可以通过offset偏移获取
+    limit: options?.limit || 20,
     scene: "normal",
+    offset: options?.offset,
   };
 
   return callEapi<unknown>({
@@ -157,6 +158,50 @@ export async function getAllAlbumsByArtistId(id: string, cookie = "") {
     hostname: "interface3.music.163.com",
     eapiPath: `/eapi/artist/albums/${id}`,
     apiPath: `/api/artist/albums/${id}`,
+    data,
+    cookie,
+  });
+}
+
+
+/**
+ * 通过歌手名查询指定歌手专辑
+ * @param id 歌手ID
+ * @param cookie 账号cookie
+ * @returns 返回50条专辑 可以通过offsite偏移获取新数据
+ */
+export async function getAllAlbumsBySingerName(keyword: string, cookie = "") {
+  const data: Record<string, unknown> = {
+    s:keyword,
+    limit: '50',
+  };
+
+  return callEapi<unknown>({
+    hostname: "interface3.music.163.com",
+    eapiPath: `/eapi/v1/search/album/get`,
+    apiPath: `/api/v1/search/album/get`,
+    data,
+    cookie,
+  });
+}
+
+/**
+ * 通过歌手ID查询歌手所有歌曲 好像最多就返回200条歌曲
+ * @param id 歌手ID
+ * @param cookie 
+ * @returns 
+ */
+export async function getAllSongsByArtistId(id: string, cookie = "") {
+  const data: Record<string, unknown> = {
+    id,
+    limit:1000,
+    offset: '0',
+    private_cloud: 'true',
+  };
+  return callEapi<unknown>({
+    hostname: "interface3.music.163.com",
+    eapiPath: `/eapi/v2/artist/songs`,
+    apiPath: `/api/v2/artist/songs`,
     data,
     cookie,
   });

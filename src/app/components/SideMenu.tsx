@@ -1,23 +1,18 @@
 'use client'
 
 import React from 'react'
-import {
-  HomeOutlined,
-  SearchOutlined,
-  UserOutlined,
-  HeartOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons'
+import { Disc3,House ,Search,ListMusic,Heart,User} from 'lucide-react';
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import clsx from 'clsx'
 
 const menuItems = [
-  { label: '推荐', icon: <HomeOutlined />, key: '/' },
-  { label: '搜索', icon: <SearchOutlined />, key: '/search', group: '发现' },
-  { label: '歌单', icon: <UnorderedListOutlined />, key: '/playlist', group: '发现' },
-  { label: '喜欢', icon: <HeartOutlined />, key: '/favorites', group: '我的' },
-  { label: '个人中心', icon: <UserOutlined />, key: '/profile', group: '我的' },
+  { label: '推荐', icon: <House />, key: '/' },
+  { label: '搜索', icon: <Search />, key: '/search', group: '发现' },
+  { label: '歌单', icon: <ListMusic />, key: '/playlist', group: '发现' },
+  { label: '专辑', icon: <Disc3 />, key: '/album', group: '发现' },
+  { label: '喜欢', icon: <Heart />, key: '/favorites', group: '我的' },
+  { label: '个人中心', icon: <User />, key: '/profile', group: '我的' },
 ]
 
 export default function SideMenu() {

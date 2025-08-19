@@ -1,9 +1,9 @@
 import React from 'react'
 
 export default function Page() {
-  return (
+  return (  
     <div>
-        个人中心 未完成!
+      专辑 未完成!
     </div>
   )
 }

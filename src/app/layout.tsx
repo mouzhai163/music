@@ -16,8 +16,9 @@ import MyHeader from "./components/MyHeader";
 import Footer from './components/Footer';
 
 export const metadata: Metadata = {
-  title: "MZ在线音乐",
+  title: "mz在线音乐",
   description: "音乐，是心灵的语言",
+  keywords: ["音乐", "在线音乐", "mz在线音乐","免费音乐","网易云解析","网易云免费下载"],
 };
 
 export default function RootLayout({

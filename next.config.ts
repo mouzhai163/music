@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      {
+        protocol: "http",
+        hostname: "**.music.126.net",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
   async rewrites() {

@@ -2,10 +2,28 @@
 import { SearchOutlined, UserOutlined } from '@ant-design/icons'
 import { Button } from 'antd';
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function MyHeader() {
   const [searchValue, setSearchValue] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const router = useRouter();
+
+  // 处理搜索提交
+  const handleSearch = () => {
+    const query = searchValue.trim();
+    if (!query) return;
+    
+    // 跳转到搜索页面，并传递搜索参数
+    router.push(`/search?q=${encodeURIComponent(query)}&type=综合`);
+  };
+
+  // 处理回车键搜索
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
 
   return (
@@ -16,7 +34,10 @@ export default function MyHeader() {
           Logo占位符
         </div>
         <div className='relative'>
-          <SearchOutlined className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 z-10' />
+          <SearchOutlined 
+            className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 z-10 cursor-pointer hover:text-blue-500 transition-colors' 
+            onClick={handleSearch}
+          />
           <input
             type="text"
             value={searchValue}
@@ -28,6 +49,7 @@ export default function MyHeader() {
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
             onChange={(e) => setSearchValue(e.target.value)}
+            onKeyDown={handleKeyPress}
           />
         </div>
       </div>

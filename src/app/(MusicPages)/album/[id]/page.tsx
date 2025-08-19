@@ -1,9 +1,9 @@
 import React from 'react'
 
-export default function Page() {
+export default function Pge() {
   return (
     <div>
-        个人中心 未完成!
+      未完成!
     </div>
   )
 }
