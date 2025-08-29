@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const parsedLimit = limit !== null ? Number(limit) : undefined;
     const opts =
       Number.isFinite(parsedLimit) && (parsedLimit as number) > 0
-        ? { limit: parsedLimit as number }
+        ? { limit: parsedLimit as number, offset: 0 }
         : undefined;
 
     const data = await searchSingerName(
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (e) {
     return NextResponse.json({ error: "服务器错误" }, { status: 500 });
   }
 }
